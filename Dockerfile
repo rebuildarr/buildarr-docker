@@ -16,23 +16,12 @@
 
 FROM python:3.11-alpine
 
-# Version of Buildarr and vendored plugins to install in the Docker container.
-ARG BUILDARR_VERSION
-ARG BUILDARR_SONARR_VERSION
-ARG BUILDARR_RADARR_VERSION
-ARG BUILDARR_PROWLARR_VERSION
-ARG BUILDARR_JELLYSEERR_VERSION
-
 # Ensure stdout/stderr writes straight through to the Docker logs without buffering.
 ENV PYTHONUNBUFFERED=1
 
 # Buildarr user UID/GID. User is created at runtime.
 ENV PUID=1000
 ENV PGID=1000
-
-# Packages to install into the Python environment on runtime, in a space-separated list.
-# Intended to be used for installing Buildarr plugins on startup.
-ENV BUILDARR_INSTALL_PACKAGES=
 
 # Mark the Buildarr configuration folder as an external volume mount point.
 VOLUME ["/config"]
@@ -41,18 +30,13 @@ VOLUME ["/config"]
 COPY bootstrap.sh /bootstrap.sh
 
 # Run the image setup script.
-RUN apk add su-exec tzdata && \
-    echo "export BUILDARR_VERSION=\${BUILDARR_VERSION:-${BUILDARR_VERSION}}" > /versions.sh && \
-    echo "export BUILDARR_SONARR_VERSION=\${BUILDARR_SONARR_VERSION:-${BUILDARR_SONARR_VERSION}}" >> /versions.sh && \
-    echo "export BUILDARR_RADARR_VERSION=\${BUILDARR_RADARR_VERSION:-${BUILDARR_RADARR_VERSION}}" >> /versions.sh && \
-    echo "export BUILDARR_PROWLARR_VERSION=\${BUILDARR_PROWLARR_VERSION:-${BUILDARR_PROWLARR_VERSION}}" >> /versions.sh && \
-    echo "export BUILDARR_JELLYSEERR_VERSION=\${BUILDARR_JELLYSEERR_VERSION:-${BUILDARR_JELLYSEERR_VERSION}}" >> /versions.sh && \
-    chmod +x /bootstrap.sh /versions.sh && \
-    python -m pip install --no-cache-dir "buildarr==${BUILDARR_VERSION}" \
-                                         "buildarr-sonarr==${BUILDARR_SONARR_VERSION}" \
-                                         "buildarr-radarr==${BUILDARR_RADARR_VERSION}" \
-                                         "buildarr-prowlarr[sonarr,radarr]==${BUILDARR_PROWLARR_VERSION}" \
-                                         "buildarr-jellyseerr[sonarr,radarr]==${BUILDARR_JELLYSEERR_VERSION}"
+RUN apk add su-exec tzdata git && \
+    chmod +x /bootstrap.sh && \
+    python -m pip install --no-cache-dir git+https://github.com/rebuildarr/buildarr.git@main \
+            git+https://github.com/rebuildarr/buildarr-radarr.git@main \
+            git+https://github.com/rebuildarr/buildarr-sonarr.git@main \
+            git+https://github.com/rebuildarr/buildarr-prowlarr.git@main \
+            git+https://github.com/rebuildarr/buildarr-jellyseerr.git@main
 
 # Set the Buildarr configuration folder as the default Docker container working folder.
 WORKDIR /config
